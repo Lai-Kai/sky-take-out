@@ -1,8 +1,22 @@
 sky:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    host: localhost
-    port: 3306
-    database: sky_take_out
-    username: root
-    password: 123456
+    host: ${MYSQL_HOST:localhost}
+    port: ${MYSQL_PORT:3306}
+    database: ${MYSQL_DATABASE:sky_take_out}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+
+  alioss:
+    access-key-id: ${ALIOSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIOSS_ACCESS_KEY_SECRET:}
+    endpoint: ${ALIOSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+    bucket-name: ${ALIOSS_BUCKET_NAME:}
+
+  qiniu:
+    access-key: ${QINIU_ACCESS_KEY:}
+    secret-key: ${QINIU_SECRET_KEY:}
+    bucket-name: ${QINIU_BUCKET_NAME:klare-sky-take-out}
+    host-name: ${QINIU_HOST_NAME:http://tbmqus6cu.hd-bkt.clouddn.com}
+    url-mode: ${QINIU_URL_MODE:public}
+    private-url-expire-seconds: ${QINIU_PRIVATE_URL_EXPIRE_SECONDS:3600}

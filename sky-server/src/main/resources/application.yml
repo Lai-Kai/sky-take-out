@@ -37,3 +37,19 @@ sky:
     admin-ttl: 7200000
     # 设置前端传递过来的令牌名称
     admin-token-name: token
+
+  alioss:
+    endpoint: ${sky.alioss.endpoint}
+    access-key-id: ${sky.alioss.access-key-id}
+    access-key-secret: ${sky.alioss.access-key-secret}
+    bucket-name: ${sky.alioss.bucket-name}
+
+  qiniu:
+    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6Wr8t0cuSB3
+    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaEbkBw7v_jn_D
+    bucket-name: klare-sky-take-out
+    host-name: http://tbmqus6cu.hd-bkt.clouddn.com
+    # public | private-signed
+    url-mode: public
+    # only used when url-mode=private-signed
+    private-url-expire-seconds: 3600
