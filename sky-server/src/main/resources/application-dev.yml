@@ -1,22 +1,35 @@
 sky:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    host: ${MYSQL_HOST:localhost}
-    port: ${MYSQL_PORT:3306}
-    database: ${MYSQL_DATABASE:sky_take_out}
-    username: ${MYSQL_USERNAME:root}
-    password: ${MYSQL_PASSWORD:}
+    host: localhost
+    port: 3306
+    database: sky_take_out
+    username: root
+    password: 123456
+  redis:
+    host: localhost
+    port: 6379
+    password: 123456
+    database: 0
+
 
   alioss:
-    access-key-id: ${ALIOSS_ACCESS_KEY_ID:}
-    access-key-secret: ${ALIOSS_ACCESS_KEY_SECRET:}
-    endpoint: ${ALIOSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
-    bucket-name: ${ALIOSS_BUCKET_NAME:}
+    access-key-id: LTAI5tChzi1g1csczkKBbec9Xxxxxxxxc
+    access-key-secret: b5Q8lM87zbKlbbxfvyYH8W7fXCOISiXxxxxc
+    endpoint: oss-cn-beijing.aliyuncs.com
+    bucket-name: java-webai-1xxxx
 
   qiniu:
-    access-key: ${QINIU_ACCESS_KEY:}
-    secret-key: ${QINIU_SECRET_KEY:}
-    bucket-name: ${QINIU_BUCKET_NAME:klare-sky-take-out}
-    host-name: ${QINIU_HOST_NAME:http://tbmqus6cu.hd-bkt.clouddn.com}
-    url-mode: ${QINIU_URL_MODE:public}
-    private-url-expire-seconds: ${QINIU_PRIVATE_URL_EXPIRE_SECONDS:3600}
+
+    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6xxxxxxxx
+    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaExxxxxxxxx
+    bucket-name: sky-take-out
+    host-name: http://xxxxxx.com
+    # public | private-signed
+    url-mode: public
+    # only used when url-mode=private-signed
+    private-url-expire-seconds: 3600
+
+  wechat:
+    appid: wx0c8b1e5f2axxxxx
+    secret: 9c8b1e5f2a0xxxxxxxb4c8a7d9c8b1e5f2a0xxxxxxxb4c8a7d9

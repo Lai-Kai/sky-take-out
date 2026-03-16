@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="sky_take_out@localhost" uuid="b4eb179f-3442-4d99-81a0-4d0aa008c134">
+    <data-source source="LOCAL" name="sky_take_out@localhost" uuid="b7888c25-d5ad-48a9-9b25-aca699109144">
       <driver-ref>mysql.8</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>

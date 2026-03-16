@@ -12,6 +12,12 @@ spring:
       url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: ${sky.datasource.username}
       password: ${sky.datasource.password}
+  redis:
+    host: ${sky.redis.host}
+    port: ${sky.redis.port}
+    password: ${sky.redis.password}
+    database: ${sky.redis.database}
+
 
 mybatis:
   #mapper配置文件
@@ -38,18 +44,27 @@ sky:
     # 设置前端传递过来的令牌名称
     admin-token-name: token
 
+    user-secret-key: itheima
+
+    user-ttl: 7200000
+
+    user-token-name: authentication
+
   alioss:
     endpoint: ${sky.alioss.endpoint}
     access-key-id: ${sky.alioss.access-key-id}
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
 
+  wechat:
+    appid: ${sky.wechat.appid}
+    secret: ${sky.wechat.secret}
+
   qiniu:
-    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6Wr8t0cuSB3
-    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaEbkBw7v_jn_D
-    bucket-name: klare-sky-take-out
-    host-name: http://tbmqus6cu.hd-bkt.clouddn.com
-    # public | private-signed
-    url-mode: public
-    # only used when url-mode=private-signed
-    private-url-expire-seconds: 3600
+    access-key: ${QINIU_ACCESS_KEY:}
+    secret-key: ${QINIU_SECRET_KEY:}
+    bucket-name: ${QINIU_BUCKET_NAME:klare-sky-take-out}
+    host-name: ${QINIU_HOST_NAME:http://tbmqus6cu.hd-bkt.clouddn.com}
+    url-mode: ${QINIU_URL_MODE:public}
+    private-url-expire-seconds: ${QINIU_PRIVATE_URL_EXPIRE_SECONDS:3600}
+
