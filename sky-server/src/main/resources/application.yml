@@ -68,3 +68,8 @@ sky:
     url-mode: ${QINIU_URL_MODE:public}
     private-url-expire-seconds: ${QINIU_PRIVATE_URL_EXPIRE_SECONDS:3600}
 
+  shop:
+    address: ${sky.shop.address}
+  baidu:
+    ak: ${sky.baidu.ak}
+

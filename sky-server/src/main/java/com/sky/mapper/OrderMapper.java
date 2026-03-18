@@ -21,4 +21,9 @@ public interface OrderMapper {
 
     @Select("select * from orders where id=#{id}")
     Orders getById(Long id);
+
+    Page<Orders> conditionSearch(OrdersPageQueryDTO ordersPageQueryDTO);
+
+    @Select("select count(1) from orders where status = #{toBeConfirmed}")
+    Integer countByStatus(Integer toBeConfirmed);
 }
