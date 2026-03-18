@@ -10,4 +10,6 @@ public interface OrderDetailMapper {
 
 
     void insertBatch(List<OrderDetail> orderDetailList);
+
+    List<OrderDetail> listByOrderId(Long id);
 }
