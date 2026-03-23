@@ -54,7 +54,6 @@
         order by order_time desc
     </select>
     <select id="conditionSearch" resultType="com.sky.entity.Orders">
-
     </select>
     <select id="sumBymap" resultType="java.lang.Double">
         select sum(amount) from orders
