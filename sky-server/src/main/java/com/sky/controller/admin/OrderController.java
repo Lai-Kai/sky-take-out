@@ -6,13 +6,14 @@ import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderVO;
+import com.sky.vo.SalesTop10ReportVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
+@RestController("adminOrderController")
 @RequestMapping("/admin/order")
 @Slf4j
 @Api("订单管理接口")
@@ -83,4 +84,6 @@ public class OrderController {
         orderService.reminder(id);
         return Result.success();
     }
+
+
 }
