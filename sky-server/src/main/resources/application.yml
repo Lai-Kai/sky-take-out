@@ -19,13 +19,17 @@ spring:
     database: ${sky.redis.database}
 
 
-mybatis:
-  #mapper配置文件
+mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.sky.entity
   configuration:
-    #开启驼峰命名
     map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
 
 logging:
   level:

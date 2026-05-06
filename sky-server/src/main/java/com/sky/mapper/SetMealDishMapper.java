@@ -1,5 +1,6 @@
 package com.sky.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.sky.entity.SetmealDish;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -7,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 @Mapper
-public interface SetMealDishMapper {
+public interface SetMealDishMapper extends BaseMapper<SetmealDish> {
 
     List<Long> getSetMealIdsByDishIds(@Param("dishIds") List<Long> dishIds);
 

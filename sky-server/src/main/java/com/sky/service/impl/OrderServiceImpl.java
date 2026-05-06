@@ -3,8 +3,9 @@ package com.sky.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
 import com.sky.dto.*;
@@ -37,16 +38,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class OrderServiceImpl implements OrderService {
+public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implements OrderService {
 
     @Value("${sky.shop.address}")
     private String shopAddress;
 
     @Value("${sky.baidu.ak}")
     private String ak;
-
-    @Autowired
-    private OrderMapper orderMapper;
 
     @Autowired
     private OrderDetailMapper orderDetailMapper;
@@ -127,10 +125,9 @@ public class OrderServiceImpl implements OrderService {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
         checkOutOfRange(addressBook.getCityName()+addressBook.getDistrictName()+addressBook.getDetail());
-        ShoppingCart shoppingCart = new ShoppingCart();
         Long userId = BaseContext.getCurrentId();
-        shoppingCart.setUserId(userId);
-        List<ShoppingCart> shoppingCartList = shoppingCartMapper.list(shoppingCart);
+        List<ShoppingCart> shoppingCartList = shoppingCartMapper.selectList(
+                new LambdaQueryWrapper<ShoppingCart>().eq(ShoppingCart::getUserId, userId));
         if(shoppingCartList == null || shoppingCartList.size() == 0) {
             throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
@@ -144,7 +141,7 @@ public class OrderServiceImpl implements OrderService {
         orders.setConsignee(addressBook.getConsignee());
         orders.setUserId(userId);
 
-        orderMapper.insert(orders);
+        super.save(orders);
         List<OrderDetail> orderDetailList = new ArrayList<>();
         for (ShoppingCart cart : shoppingCartList) {
             // TODO 插入订单详情表
@@ -155,7 +152,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         orderDetailMapper.insertBatch(orderDetailList);
-        shoppingCartMapper.clearShoppingCart(userId);
+        shoppingCartMapper.delete(new LambdaQueryWrapper<ShoppingCart>()
+                .eq(ShoppingCart::getUserId, userId));
 
         OrderSubmitVO vo = OrderSubmitVO.builder()
                 .id(orders.getId())
@@ -203,7 +201,7 @@ public class OrderServiceImpl implements OrderService {
     public void paySuccess(String outTradeNo) {
 
         // 根据订单号查询订单
-        Orders ordersDB = orderMapper.getByNumber(outTradeNo);
+        Orders ordersDB = baseMapper.getByNumber(outTradeNo);
 
         // 根据订单id更新订单的状态、支付方式、支付状态、结账时间
         Orders orders = Orders.builder()
@@ -212,7 +210,7 @@ public class OrderServiceImpl implements OrderService {
                 .payStatus(Orders.PAID)
                 .checkoutTime(LocalDateTime.now())
                 .build();
-        orderMapper.update(orders);
+        updateById(orders);
 
         Map map = new HashMap();
         map.put("type",1);
@@ -224,25 +222,26 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public PageResult page(Integer page, Integer pageSize, Integer status) {
-        PageHelper.startPage(page, pageSize);
+        Page<Orders> Page = new Page<>(page, pageSize);
         OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
         ordersPageQueryDTO.setStatus(status);
         ordersPageQueryDTO.setUserId(BaseContext.getCurrentId());
-        Page<Orders> opage = orderMapper.pageQuery(ordersPageQueryDTO);
+        baseMapper.pageQuery(ordersPageQueryDTO, Page);
         List<OrderVO> orderVOList = new ArrayList<>();
-        for (Orders orders : opage.getResult()) {
+        for (Orders orders : Page.getRecords()) {
             OrderVO orderVO = new OrderVO();
             BeanUtils.copyProperties(orders, orderVO);
-            List<OrderDetail> orderDetailList = orderDetailMapper.listByOrderId(orders.getId());
+            List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+                    new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orders.getId()));
             orderVO.setOrderDetailList(orderDetailList);
             orderVOList.add(orderVO);
         }
-        return new PageResult(opage.getTotal(), orderVOList);
+        return new PageResult(Page.getTotal(), orderVOList);
     }
 
     @Override
     public OrderVO details(Long id) {
-        Orders orders = orderMapper.getById(id);
+        Orders orders = super.getById(id);
         List<OrderDetail> orderDetailList = orderDetailMapper.listByOrderId(orders.getId());
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(orders, orderVO);
@@ -252,7 +251,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void userCancelById(Long id) throws Exception {
-        Orders orders = orderMapper.getById(id);
+        Orders orders = super.getById(id);
         if (orders == null){
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
@@ -270,13 +269,14 @@ public class OrderServiceImpl implements OrderService {
         orders.setStatus(Orders.CANCELLED);
         orders.setCancelTime(LocalDateTime.now());
         orders.setCancelReason("用户取消");
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void repetition(Long id) {
         Long userId = BaseContext.getCurrentId();
-        List<OrderDetail> orderDetailList = orderDetailMapper.listByOrderId(id);
+        List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+                new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, id));
         List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(orderDetail -> {
             ShoppingCart shoppingCart = new ShoppingCart();
             BeanUtils.copyProperties(orderDetail, shoppingCart, "id");
@@ -289,17 +289,17 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public PageResult conditionSearch(OrdersPageQueryDTO ordersPageQueryDTO) {
-        PageHelper.startPage(ordersPageQueryDTO.getPage(), ordersPageQueryDTO.getPageSize());
-        Page<Orders> page = orderMapper.conditionSearch(ordersPageQueryDTO);
+        Page<Orders> page = new Page<>(ordersPageQueryDTO.getPage(), ordersPageQueryDTO.getPageSize());
+        baseMapper.conditionSearch(ordersPageQueryDTO, page);
         List<OrderVO> orderVOList = getOderVOList(page);
         return new PageResult(page.getTotal(), orderVOList);
     }
 
     @Override
     public OrderStatisticsVO statics() {
-        Integer toBeConfirmed = orderMapper.countByStatus(Orders.TO_BE_CONFIRMED);
-        Integer confirmed = orderMapper.countByStatus(Orders.CONFIRMED);
-        Integer deliveryInProgress = orderMapper.countByStatus(Orders.DELIVERY_IN_PROGRESS);
+        Integer toBeConfirmed = baseMapper.countByStatus(Orders.TO_BE_CONFIRMED);
+        Integer confirmed = baseMapper.countByStatus(Orders.CONFIRMED);
+        Integer deliveryInProgress = baseMapper.countByStatus(Orders.DELIVERY_IN_PROGRESS);
 
         OrderStatisticsVO orderStatisticsVO = new OrderStatisticsVO();
         orderStatisticsVO.setToBeConfirmed(toBeConfirmed);
@@ -311,15 +311,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void confirm(OrdersConfirmDTO ordersConfirmDTO) {
         Orders orders = Orders.builder()
-                .id(BaseContext.getCurrentId())
+                .id(ordersConfirmDTO.getId())
                 .status(Orders.CONFIRMED)
                 .build();
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void rejection(OrdersRejectionDTO ordersRejectionDTO) throws Exception {
-        Orders ordersDB = orderMapper.getById(ordersRejectionDTO.getId());
+        Orders ordersDB = super.getById(ordersRejectionDTO.getId());
         if (ordersDB == null || !ordersDB.getStatus().equals(Orders.TO_BE_CONFIRMED)) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
@@ -336,12 +336,12 @@ public class OrderServiceImpl implements OrderService {
         orders.setStatus(Orders.CANCELLED);
         orders.setCancelReason(ordersRejectionDTO.getRejectionReason());
         orders.setCancelTime(LocalDateTime.now());
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void cancel(OrdersCancelDTO ordersCancelDTO) throws Exception {
-        Orders ordersDB = orderMapper.getById(ordersCancelDTO.getId());
+        Orders ordersDB = super.getById(ordersCancelDTO.getId());
         if (ordersDB == null || !ordersDB.getStatus().equals(Orders.TO_BE_CONFIRMED)) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
@@ -358,24 +358,24 @@ public class OrderServiceImpl implements OrderService {
         orders.setStatus(Orders.CANCELLED);
         orders.setCancelReason(ordersCancelDTO.getCancelReason());
         orders.setCancelTime(LocalDateTime.now());
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void delivery(Long id) {
-        Orders ordersDB = orderMapper.getById(id);
+        Orders ordersDB = super.getById(id);
         if (ordersDB == null || !ordersDB.getStatus().equals(Orders.CONFIRMED)) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
         Orders orders = new Orders();
         orders.setId(ordersDB.getId());
         orders.setStatus(Orders.DELIVERY_IN_PROGRESS);
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void complete(Long id) {
-        Orders ordersDB = orderMapper.getById(id);
+        Orders ordersDB = super.getById(id);
         if (ordersDB == null || !ordersDB.getStatus().equals(Orders.DELIVERY_IN_PROGRESS)) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
@@ -383,12 +383,12 @@ public class OrderServiceImpl implements OrderService {
         orders.setId(ordersDB.getId());
         orders.setStatus(Orders.COMPLETED);
         orders.setDeliveryTime(LocalDateTime.now());
-        orderMapper.update(orders);
+        updateById(orders);
     }
 
     @Override
     public void reminder(Long id) {
-        Orders ordersDB = orderMapper.getById(id);
+        Orders ordersDB = super.getById(id);
         if (ordersDB == null) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
@@ -402,7 +402,7 @@ public class OrderServiceImpl implements OrderService {
 
     private List<OrderVO> getOderVOList(Page<Orders> page) {
         List<OrderVO> orderVOList = new ArrayList<>();
-        for (Orders orders : page.getResult()) {
+        for (Orders orders : page.getRecords()) {
             OrderVO orderVO = new OrderVO();
             BeanUtils.copyProperties(orders, orderVO);
             String orderDishes = getOrderDishesStr(orders);
@@ -413,7 +413,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String getOrderDishesStr(Orders orders) {
-        List<OrderDetail> orderDetailList = orderDetailMapper.listByOrderId(orders.getId());
+        List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+                new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orders.getId()));
         List<String> orderDishList = orderDetailList.stream().map(orderDetail -> {
             return orderDetail.getName() + "*" + orderDetail.getNumber() + ";";
         }).collect(Collectors.toList());

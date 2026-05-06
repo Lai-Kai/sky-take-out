@@ -1,20 +1,19 @@
 package com.sky.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.context.BaseContext;
 import com.sky.entity.AddressBook;
 import com.sky.mapper.AddressBookMapper;
 import com.sky.service.AddressBookService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 @Service
 @Slf4j
-public class AddressBookServiceImpl implements AddressBookService {
-    @Autowired
-    private AddressBookMapper addressBookMapper;
+public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, AddressBook> implements AddressBookService {
 
     /**
      * 条件查询
@@ -23,7 +22,10 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @return
      */
     public List<AddressBook> list(AddressBook addressBook) {
-        return addressBookMapper.list(addressBook);
+        return lambdaQuery()
+                .eq(addressBook.getUserId() != null, AddressBook::getUserId, addressBook.getUserId())
+                .eq(addressBook.getIsDefault() != null, AddressBook::getIsDefault, addressBook.getIsDefault())
+                .list();
     }
 
     /**
@@ -34,7 +36,7 @@ public class AddressBookServiceImpl implements AddressBookService {
     public void save(AddressBook addressBook) {
         addressBook.setUserId(BaseContext.getCurrentId());
         addressBook.setIsDefault(0);
-        addressBookMapper.insert(addressBook);
+        super.save(addressBook);
     }
 
     /**
@@ -44,7 +46,7 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @return
      */
     public AddressBook getById(Long id) {
-        AddressBook addressBook = addressBookMapper.getById(id);
+        AddressBook addressBook = super.getById(id);
         return addressBook;
     }
 
@@ -54,7 +56,7 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @param addressBook
      */
     public void update(AddressBook addressBook) {
-        addressBookMapper.update(addressBook);
+        updateById(addressBook);
     }
 
     /**
@@ -67,11 +69,14 @@ public class AddressBookServiceImpl implements AddressBookService {
         //1、将当前用户的所有地址修改为非默认地址 update address_book set is_default = ? where user_id = ?
         addressBook.setIsDefault(0);
         addressBook.setUserId(BaseContext.getCurrentId());
-        addressBookMapper.updateIsDefaultByUserId(addressBook);
+        lambdaUpdate()
+                .set(AddressBook::getIsDefault, addressBook.getIsDefault())
+                .eq(AddressBook::getUserId, addressBook.getUserId())
+                .update();
 
         //2、将当前地址改为默认地址 update address_book set is_default = ? where id = ?
         addressBook.setIsDefault(1);
-        addressBookMapper.update(addressBook);
+        updateById(addressBook);
     }
 
     /**
@@ -80,7 +85,7 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @param id
      */
     public void deleteById(Long id) {
-        addressBookMapper.deleteById(id);
+        removeById(id);
     }
 
 }

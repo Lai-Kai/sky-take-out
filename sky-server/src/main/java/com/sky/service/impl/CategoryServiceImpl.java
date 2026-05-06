@@ -1,7 +1,7 @@
 package com.sky.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.StatusConstant;
 import com.sky.context.BaseContext;
@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
+
 import java.util.List;
 
 /**
@@ -26,10 +26,8 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class CategoryServiceImpl implements CategoryService {
+public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 
-    @Autowired
-    private CategoryMapper categoryMapper;
     @Autowired
     private DishMapper dishMapper;
     @Autowired
@@ -53,7 +51,7 @@ public class CategoryServiceImpl implements CategoryService {
 //        category.setCreateUser(BaseContext.getCurrentId());
 //        category.setUpdateUser(BaseContext.getCurrentId());
 
-        categoryMapper.insert(category);
+        super.save(category);
     }
 
     /**
@@ -62,10 +60,9 @@ public class CategoryServiceImpl implements CategoryService {
      * @return
      */
     public PageResult pageQuery(CategoryPageQueryDTO categoryPageQueryDTO) {
-        PageHelper.startPage(categoryPageQueryDTO.getPage(),categoryPageQueryDTO.getPageSize());
-        //下一条sql进行分页，自动加入limit关键字分页
-        Page<Category> page = categoryMapper.pageQuery(categoryPageQueryDTO);
-        return new PageResult(page.getTotal(), page.getResult());
+        Page<Category> page = new Page<>(categoryPageQueryDTO.getPage(), categoryPageQueryDTO.getPageSize());
+        baseMapper.pageQuery(categoryPageQueryDTO, page);
+        return new PageResult(page.getTotal(), page.getRecords());
     }
 
     /**
@@ -88,7 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         //删除分类数据
-        categoryMapper.deleteById(id);
+        removeById(id);
     }
 
     /**
@@ -103,7 +100,7 @@ public class CategoryServiceImpl implements CategoryService {
 //        category.setUpdateTime(LocalDateTime.now());
 //        category.setUpdateUser(BaseContext.getCurrentId());
 
-        categoryMapper.update(category);
+        updateById(category);
     }
 
     /**
@@ -115,10 +112,10 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = Category.builder()
                 .id(id)
                 .status(status)
-                .updateTime(LocalDateTime.now())
+                .updateTime(java.time.LocalDateTime.now())
                 .updateUser(BaseContext.getCurrentId())
                 .build();
-        categoryMapper.update(category);
+        updateById(category);
     }
 
     /**
@@ -127,6 +124,11 @@ public class CategoryServiceImpl implements CategoryService {
      * @return
      */
     public List<Category> list(Integer type) {
-        return categoryMapper.list(type);
+        return lambdaQuery()
+                .eq(type != null, Category::getType, type)
+                .eq(Category::getStatus, StatusConstant.ENABLE)
+                .orderByAsc(Category::getSort)
+                .orderByDesc(Category::getCreateTime)
+                .list();
     }
 }

@@ -2,7 +2,7 @@ package com.sky.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.google.gson.JsonObject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
 import com.sky.dto.UserLoginDTO;
 import com.sky.entity.User;
@@ -19,15 +19,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     public static final String WX_LOGIN = "https://api.weixin.qq.com/sns/jscode2session";
 
     @Autowired
     private WeChatProperties weChatProperties;
-
-    @Autowired
-    private UserMapper userMapper;
 
     @Override
     public User wxLogin(UserLoginDTO userLoginDTO) {
@@ -37,13 +34,13 @@ public class UserServiceImpl implements UserService {
             throw new LoginFailedException(MessageConstant.LOGIN_FAILED);
         }
 
-        User user = userMapper.getByOpenid(openId);
+        User user = baseMapper.getByOpenid(openId);
         if (user == null){
             user = User.builder()
                     .openid(openId)
                     .createTime(LocalDateTime.now())
                     .build();
-            userMapper.insert(user);
+            super.save(user);
         }
         return user;
     }

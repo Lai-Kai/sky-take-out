@@ -21,10 +21,10 @@ sky:
 
   qiniu:
 
-    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6xxxxxxxx
-    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaExxxxxxxxx
-    bucket-name: sky-take-out
-    host-name: http://xxxxxx.com
+    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6Wr8t0cuSB3
+    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaEbkBw7v_jn_D
+    bucket-name: klare-sky-take-out
+    host-name: http://tbmqus6cu.hd-bkt.clouddn.com
     # public | private-signed
     url-mode: public
     # only used when url-mode=private-signed

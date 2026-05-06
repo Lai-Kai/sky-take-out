@@ -1,7 +1,7 @@
 package com.sky.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.StatusConstant;
 import com.sky.dto.DishDTO;
@@ -26,10 +26,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class DishServiceImpl implements DishService {
-
-    @Autowired
-    private DishMapper dishMapper;
+public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements DishService {
 
     @Autowired
     private DishFlavorMapper dishFlavorMapper;
@@ -42,7 +39,7 @@ public class DishServiceImpl implements DishService {
     public void saveWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO,dish);
-        dishMapper.insert(dish);
+        super.save(dish);
         List<DishFlavor> flavors = dishDTO.getFlavors();
         Long dishId = dish.getId();
         for (DishFlavor flavor : flavors) {
@@ -55,15 +52,15 @@ public class DishServiceImpl implements DishService {
 
     @Override
     public PageResult pageQuery(DishPageQueryDTO dishPageQueryDTO) {
-        PageHelper.startPage(dishPageQueryDTO.getPage(), dishPageQueryDTO.getPageSize());
-        Page<DishVO> page = dishMapper.pageQuery(dishPageQueryDTO);
-        return new PageResult(page.getTotal(), page.getResult());
+        Page<DishVO> page = new Page<>(dishPageQueryDTO.getPage(), dishPageQueryDTO.getPageSize());
+        baseMapper.pageQuery(dishPageQueryDTO, page);
+        return new PageResult(page.getTotal(), page.getRecords());
     }
 
     @Override
     public void deleteBatch(List<Long> ids) {
         for (Long id : ids) {
-            Dish dish = dishMapper.getById(id);
+            Dish dish = super.getById(id);
             if (dish.getStatus() == StatusConstant.ENABLE){
                 throw new DeletionNotAllowedException(MessageConstant.DISH_ON_SALE);
             }
@@ -72,14 +69,14 @@ public class DishServiceImpl implements DishService {
         if (setMealIds != null && setMealIds.size() > 0) {
             throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
         }
-        dishMapper.deleteBatch(ids);
+        removeByIds(ids);
         dishFlavorMapper.deleteByDishIds(ids);
 
     }
 
     @Override
     public DishVO getByIdWithFlavor(Long id) {
-        Dish dish = dishMapper.getById(id);
+        Dish dish = super.getById(id);
         List<DishFlavor> dishFlavors = dishFlavorMapper.getByDishId(id);
         DishVO dishVO = new DishVO();
         BeanUtils.copyProperties(dish,dishVO);
@@ -92,7 +89,7 @@ public class DishServiceImpl implements DishService {
     public void updateWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO,dish);
-        dishMapper.update(dish);
+        updateById(dish);
         dishFlavorMapper.deleteByDishId(dishDTO.getId());
         List<DishFlavor> flavors = dishDTO.getFlavors();
         if (flavors != null && flavors.size() > 0) {
@@ -106,16 +103,21 @@ public class DishServiceImpl implements DishService {
 
     @Override
     public List<Dish> getByCategoryId(Long categoryId) {
-        Dish dish = Dish.builder()
-                .status(StatusConstant.ENABLE)
-                .categoryId(categoryId)
-                .build();
-        return dishMapper.list(dish);
+        return lambdaQuery()
+                .eq(Dish::getStatus, StatusConstant.ENABLE)
+                .eq(Dish::getCategoryId, categoryId)
+                .list();
     }
 
     @Override
     public List<DishVO> listWithFlavor(Dish dish) {
-        List<Dish> dishes = dishMapper.list(dish);
+        List<Dish> dishes = lambdaQuery()
+                .eq(dish.getStatus() != null, Dish::getStatus, dish.getStatus())
+                .eq(dish.getCategoryId() != null, Dish::getCategoryId, dish.getCategoryId())
+                .like(dish.getName() != null, Dish::getName, dish.getName())
+                .orderByAsc(Dish::getSort)
+                .orderByDesc(Dish::getCreateTime)
+                .list();
         List<DishVO> dishVOList = new ArrayList<>();
         for (Dish d : dishes){
             DishVO dishVO = new DishVO();
@@ -133,6 +135,6 @@ public class DishServiceImpl implements DishService {
                 .id(id)
                 .status(status)
                 .build();
-        dishMapper.update(dish);
+        updateById(dish);
     }
 }

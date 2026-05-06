@@ -8,8 +8,8 @@ import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WebSocket服务
@@ -19,7 +19,7 @@ import java.util.Map;
 public class WebSocketServer {
 
     //存放会话对象
-    private static Map<String, Session> sessionMap = new HashMap();
+    private static Map<String, Session> sessionMap = new ConcurrentHashMap<>();
 
     /**
      * 连接建立成功调用的方法

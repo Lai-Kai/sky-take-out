@@ -1,7 +1,7 @@
 package com.sky.service.impl;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.PasswordConstant;
 import com.sky.constant.StatusConstant;
@@ -24,10 +24,7 @@ import org.springframework.util.DigestUtils;
 import java.time.LocalDateTime;
 
 @Service
-public class EmployeeServiceImpl implements EmployeeService {
-
-    @Autowired
-    private EmployeeMapper employeeMapper;
+public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> implements EmployeeService {
 
     /**
      * 员工登录
@@ -40,7 +37,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         String password = employeeLoginDTO.getPassword();
 
         //1、根据用户名查询数据库中的数据
-        Employee employee = employeeMapper.getByUsername(username);
+        Employee employee = baseMapper.getByUsername(username);
 
         //2、处理各种异常情况（用户名不存在、密码不对、账号被锁定）
         if (employee == null) {
@@ -77,14 +74,14 @@ public class EmployeeServiceImpl implements EmployeeService {
 //        employee.setUpdateUser(BaseContext.getCurrentId());
 //        employee.setCreateUser(BaseContext.getCurrentId());
 
-        employeeMapper.insert(employee);
+        super.save(employee);
      }
 
     @Override
     public PageResult pageQuery(EmployeePageQueryDTO employeePageQueryDTO) {
-        PageHelper.startPage(employeePageQueryDTO.getPage(), employeePageQueryDTO.getPageSize());
-        Page<Employee> page = employeeMapper.pageQuery(employeePageQueryDTO);
-        return new PageResult(page.getTotal(), page.getResult());
+        Page<Employee> page = new Page<>(employeePageQueryDTO.getPage(), employeePageQueryDTO.getPageSize());
+        baseMapper.pageQuery(employeePageQueryDTO, page);
+        return new PageResult(page.getTotal(), page.getRecords());
     }
 
     @Override
@@ -95,12 +92,12 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .updateTime(LocalDateTime.now())
                         .build();
 
-        employeeMapper.update(emp);
+        updateById(emp);
     }
 
     @Override
     public Employee getById(Long id) {
-        Employee emp = employeeMapper.getById(id);
+        Employee emp = super.getById(id);
         emp.setPassword("****");
         return emp;
     }
@@ -111,7 +108,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         BeanUtils.copyProperties(emp, empl);
 //        empl.setUpdateTime(LocalDateTime.now());
 //        empl.setUpdateUser(BaseContext.getCurrentId());
-        employeeMapper.update(empl);
+        updateById(empl);
     }
 
 }

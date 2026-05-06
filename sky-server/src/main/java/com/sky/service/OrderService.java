@@ -1,13 +1,15 @@
 package com.sky.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.sky.dto.*;
+import com.sky.entity.Orders;
 import com.sky.result.PageResult;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 
-public interface OrderService {
+public interface OrderService extends IService<Orders> {
     OrderSubmitVO submit(OrdersSubmitDTO dto);
     /**
      * 订单支付

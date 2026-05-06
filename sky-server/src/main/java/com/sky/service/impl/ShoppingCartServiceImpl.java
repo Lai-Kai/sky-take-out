@@ -1,5 +1,6 @@
 package com.sky.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.context.BaseContext;
 import com.sky.dto.ShoppingCartDTO;
 import com.sky.entity.Dish;
@@ -19,9 +20,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class ShoppingCartServiceImpl implements ShoppingCartService {
-    @Autowired
-    private ShoppingCartMapper shoppingCartMapper;
+public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, ShoppingCart> implements ShoppingCartService {
 
     @Autowired
     private DishMapper dishMapper;
@@ -35,11 +34,15 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         BeanUtils.copyProperties(dto, shoppingCart);
         Long userId = BaseContext.getCurrentId();
         shoppingCart.setUserId(userId);
-        List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
+        List<ShoppingCart> list = lambdaQuery()
+                .eq(ShoppingCart::getUserId, userId)
+                .eq(dto.getDishId() != null, ShoppingCart::getDishId, dto.getDishId())
+                .eq(dto.getSetmealId() != null, ShoppingCart::getSetmealId, dto.getSetmealId())
+                .list();
         if (list != null && list.size() > 0) {
             ShoppingCart cart = list.get(0);
             cart.setNumber(cart.getNumber() + 1);
-            shoppingCartMapper.update(cart);
+            updateById(cart);
         } else {
             Long dishId = dto.getDishId();
             if (dishId != null) {
@@ -56,20 +59,22 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
             }
             shoppingCart.setNumber(1);
             shoppingCart.setCreateTime(LocalDateTime.now());
-            shoppingCartMapper.insert(shoppingCart);
+            super.save(shoppingCart);
         }
     }
 
     @Override
     public List<ShoppingCart> showShoppingCart(Long userId) {
-        ShoppingCart shoppingCart = new ShoppingCart();
-        shoppingCart.setUserId(userId);
-        return shoppingCartMapper.list(shoppingCart);
+        return lambdaQuery()
+                .eq(ShoppingCart::getUserId, userId)
+                .orderByDesc(ShoppingCart::getCreateTime)
+                .list();
     }
 
     @Override
     public void deleteShoppingCart() {
         Long userId = BaseContext.getCurrentId();
-        shoppingCartMapper.clearShoppingCart(userId);
+        remove(lambdaQuery()
+                .eq(ShoppingCart::getUserId, userId));
     }
 }
