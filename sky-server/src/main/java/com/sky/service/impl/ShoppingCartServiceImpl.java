@@ -6,9 +6,9 @@ import com.sky.dto.ShoppingCartDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.Setmeal;
 import com.sky.entity.ShoppingCart;
-import com.sky.mapper.DishMapper;
-import com.sky.mapper.SetmealMapper;
 import com.sky.mapper.ShoppingCartMapper;
+import com.sky.service.DishService;
+import com.sky.service.SetMealService;
 import com.sky.service.ShoppingCartService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -23,10 +23,10 @@ import java.util.List;
 public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, ShoppingCart> implements ShoppingCartService {
 
     @Autowired
-    private DishMapper dishMapper;
+    private DishService dishService;
 
     @Autowired
-    private SetmealMapper setmealMapper;
+    private SetMealService setmealService;
 
     @Override
     public void addShoppingCart(ShoppingCartDTO dto) {
@@ -46,7 +46,7 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
         } else {
             Long dishId = dto.getDishId();
             if (dishId != null) {
-                Dish dish = dishMapper.getById(dishId);
+                Dish dish = dishService.getById(dishId);
                 shoppingCart.setName(dish.getName());
                 shoppingCart.setImage(dish.getImage());
                 shoppingCart.setAmount(dish.getPrice());

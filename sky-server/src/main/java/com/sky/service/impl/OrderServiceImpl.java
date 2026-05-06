@@ -13,9 +13,13 @@ import com.sky.entity.*;
 import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
-import com.sky.mapper.*;
+import com.sky.mapper.OrderMapper;
 import com.sky.result.PageResult;
+import com.sky.service.AddressBookService;
+import com.sky.service.OrderDetailService;
 import com.sky.service.OrderService;
+import com.sky.service.ShoppingCartService;
+import com.sky.service.UserService;
 import com.sky.utils.HttpClientUtil;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
@@ -47,19 +51,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private String ak;
 
     @Autowired
-    private OrderDetailMapper orderDetailMapper;
+    private OrderDetailService orderDetailService;
 
     @Autowired
-    private AddressBookMapper addressBookMapper;
+    private AddressBookService addressBookService;
 
     @Autowired
-    private ShoppingCartMapper shoppingCartMapper;
+    private ShoppingCartService shoppingCartService;
 
     @Autowired
     private WeChatPayUtil weChatPayUtil;
 
     @Autowired
-    private UserMapper userMapper;
+    private UserService userService;
 
     @Autowired
     private WebSocketServer webSocketServer;
@@ -120,13 +124,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderSubmitVO submit(OrdersSubmitDTO dto) {
-        AddressBook addressBook = addressBookMapper.getById(dto.getAddressBookId());
+        AddressBook addressBook = addressBookService.getById(dto.getAddressBookId());
         if (addressBook == null) {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
         checkOutOfRange(addressBook.getCityName()+addressBook.getDistrictName()+addressBook.getDetail());
         Long userId = BaseContext.getCurrentId();
-        List<ShoppingCart> shoppingCartList = shoppingCartMapper.selectList(
+        List<ShoppingCart> shoppingCartList = shoppingCartService.list(
                 new LambdaQueryWrapper<ShoppingCart>().eq(ShoppingCart::getUserId, userId));
         if(shoppingCartList == null || shoppingCartList.size() == 0) {
             throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
@@ -151,8 +155,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orderDetailList.add(orderDetail);
         }
 
-        orderDetailMapper.insertBatch(orderDetailList);
-        shoppingCartMapper.delete(new LambdaQueryWrapper<ShoppingCart>()
+        orderDetailService.saveBatch(orderDetailList);
+        shoppingCartService.remove(new LambdaQueryWrapper<ShoppingCart>()
                 .eq(ShoppingCart::getUserId, userId));
 
         OrderSubmitVO vo = OrderSubmitVO.builder()
@@ -173,7 +177,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     public OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception {
         // 当前登录用户id
         Long userId = BaseContext.getCurrentId();
-        User user = userMapper.getById(userId);
+        User user = userService.getById(userId);
 
         //调用微信支付接口，生成预支付交易单
         JSONObject jsonObject = weChatPayUtil.pay(
@@ -231,7 +235,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         for (Orders orders : Page.getRecords()) {
             OrderVO orderVO = new OrderVO();
             BeanUtils.copyProperties(orders, orderVO);
-            List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+            List<OrderDetail> orderDetailList = orderDetailService.list(
                     new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orders.getId()));
             orderVO.setOrderDetailList(orderDetailList);
             orderVOList.add(orderVO);
@@ -242,7 +246,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Override
     public OrderVO details(Long id) {
         Orders orders = super.getById(id);
-        List<OrderDetail> orderDetailList = orderDetailMapper.listByOrderId(orders.getId());
+        List<OrderDetail> orderDetailList = orderDetailService.list(new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orders.getId()));
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(orders, orderVO);
         orderVO.setOrderDetailList(orderDetailList);
@@ -275,7 +279,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Override
     public void repetition(Long id) {
         Long userId = BaseContext.getCurrentId();
-        List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+        List<OrderDetail> orderDetailList = orderDetailService.list(
                 new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, id));
         List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(orderDetail -> {
             ShoppingCart shoppingCart = new ShoppingCart();
@@ -284,7 +288,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             shoppingCart.setCreateTime(LocalDateTime.now());
             return shoppingCart;
         }).collect(Collectors.toList());
-        shoppingCartMapper.insertBatch(shoppingCartList);
+        shoppingCartService.saveBatch(shoppingCartList);
     }
 
     @Override
@@ -413,7 +417,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     private String getOrderDishesStr(Orders orders) {
-        List<OrderDetail> orderDetailList = orderDetailMapper.selectList(
+        List<OrderDetail> orderDetailList = orderDetailService.list(
                 new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orders.getId()));
         List<String> orderDishList = orderDetailList.stream().map(orderDetail -> {
             return orderDetail.getName() + "*" + orderDetail.getNumber() + ";";

@@ -1,5 +1,6 @@
 package com.sky.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sky.constant.MessageConstant;
@@ -10,9 +11,9 @@ import com.sky.entity.Dish;
 import com.sky.entity.Setmeal;
 import com.sky.entity.SetmealDish;
 import com.sky.exception.DeletionNotAllowedException;
-import com.sky.mapper.SetMealDishMapper;
 import com.sky.mapper.SetmealMapper;
 import com.sky.result.PageResult;
+import com.sky.service.SetMealDishService;
 import com.sky.service.SetMealService;
 import com.sky.vo.DishItemVO;
 import com.sky.vo.SetmealVO;
@@ -26,7 +27,7 @@ import java.util.List;
 public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> implements SetMealService {
 
     @Autowired
-    private SetMealDishMapper setMealDishMapper;
+    private SetMealDishService setMealDishService;
 
     @Override
     public void saveWithDish(SetmealDTO setmealDTO) {
@@ -38,7 +39,7 @@ public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         setmealDishes.forEach(setmealDish -> {
             setmealDish.setSetmealId(id);
         });
-        setMealDishMapper.insertBatch(setmealDishes);
+        setMealDishService.saveBatch(setmealDishes);
     }
 
     @Override
@@ -58,7 +59,7 @@ public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         });
         ids.forEach(id -> {
             removeById(id);
-            setMealDishMapper.deleteBySetmealId(id);
+            setMealDishService.remove(new LambdaQueryWrapper<SetmealDish>().eq(SetmealDish::getSetmealId, id));
         });
     }
 
@@ -67,7 +68,7 @@ public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         Setmeal setmeal = super.getById(id);
         SetmealVO setmealVO = new SetmealVO();
         BeanUtils.copyProperties(setmeal, setmealVO);
-        List<SetmealDish> setmealDishes = setMealDishMapper.getBySetmealId(id);
+        List<SetmealDish> setmealDishes = setMealDishService.list(new LambdaQueryWrapper<SetmealDish>().eq(SetmealDish::getSetmealId, id));
         setmealVO.setSetmealDishes(setmealDishes);
         return setmealVO;
 
@@ -84,7 +85,7 @@ public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         setmealDishes.forEach(setmealDish -> {
             setmealDish.setSetmealId(id);
         });
-        setMealDishMapper.insertBatch(setmealDishes);
+        setMealDishService.saveBatch(setmealDishes);
     }
 
     @Override
