@@ -1,11 +1,15 @@
 package com.sky.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sky.constant.StatusConstant;
+import com.sky.entity.Dish;
 import com.sky.entity.Orders;
-import com.sky.mapper.DishMapper;
-import com.sky.mapper.OrderMapper;
-import com.sky.mapper.SetmealMapper;
-import com.sky.mapper.UserMapper;
+import com.sky.entity.Setmeal;
+import com.sky.entity.User;
+import com.sky.service.DishService;
+import com.sky.service.OrderService;
+import com.sky.service.SetMealService;
+import com.sky.service.UserService;
 import com.sky.service.WorkspaceService;
 import com.sky.vo.BusinessDataVO;
 import com.sky.vo.DishOverViewVO;
@@ -16,21 +20,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @Slf4j
 public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Autowired
-    private OrderMapper orderMapper;
+    private OrderService orderService;
     @Autowired
-    private UserMapper userMapper;
+    private UserService userService;
     @Autowired
-    private DishMapper dishMapper;
+    private DishService dishService;
     @Autowired
-    private SetmealMapper setmealMapper;
+    private SetMealService setmealService;
 
     /**
      * 根据时间段统计营业数据
@@ -41,20 +43,21 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public BusinessDataVO getBusinessData(LocalDateTime begin, LocalDateTime end) {
 
 
-        Map map = new HashMap();
-        map.put("begin",begin);
-        map.put("end",end);
-
         //查询总订单数
-        Integer totalOrderCount = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.ge(Orders::getOrderTime, begin).lt(Orders::getOrderTime, end);
+        Integer totalOrderCount = Math.toIntExact(orderService.count(orderWrapper));
 
-        map.put("status", Orders.COMPLETED);
         //营业额
-        Double turnover = orderMapper.sumByMap(map);
+        LambdaQueryWrapper<Orders> turnoverWrapper = new LambdaQueryWrapper<>();
+        turnoverWrapper.ge(Orders::getOrderTime, begin).lt(Orders::getOrderTime, end).eq(Orders::getStatus, Orders.COMPLETED);
+        Double turnover = orderService.list(turnoverWrapper).stream().mapToDouble(Orders::getAmount).sum();
         turnover = turnover == null? 0.0 : turnover;
 
         //有效订单数
-        Integer validOrderCount = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> validWrapper = new LambdaQueryWrapper<>();
+        validWrapper.ge(Orders::getOrderTime, begin).lt(Orders::getOrderTime, end).eq(Orders::getStatus, Orders.COMPLETED);
+        Integer validOrderCount = Math.toIntExact(orderService.count(validWrapper));
 
         Double unitPrice = 0.0;
 
@@ -67,7 +70,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
 
         //新增用户数
-        Integer newUsers = userMapper.countByMap(map);
+        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+        userWrapper.ge(User::getCreateTime, begin).le(User::getCreateTime, end);
+        Integer newUsers = Math.toIntExact(userService.count(userWrapper));
 
         return BusinessDataVO.builder()
                 .turnover(turnover)
@@ -85,28 +90,32 @@ public class WorkspaceServiceImpl implements WorkspaceService {
      * @return
      */
     public OrderOverViewVO getOrderOverView() {
-        Map map = new HashMap();
-        map.put("begin", LocalDateTime.now().with(LocalTime.MIN));
-        map.put("status", Orders.TO_BE_CONFIRMED);
+        LocalDateTime todayBegin = LocalDateTime.now().with(LocalTime.MIN);
 
         //待接单
-        Integer waitingOrders = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> waitingWrapper = new LambdaQueryWrapper<>();
+        waitingWrapper.ge(Orders::getOrderTime, todayBegin).eq(Orders::getStatus, Orders.TO_BE_CONFIRMED);
+        Integer waitingOrders = Math.toIntExact(orderService.count(waitingWrapper));
 
         //待派送
-        map.put("status", Orders.CONFIRMED);
-        Integer deliveredOrders = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> deliveredWrapper = new LambdaQueryWrapper<>();
+        deliveredWrapper.ge(Orders::getOrderTime, todayBegin).eq(Orders::getStatus, Orders.CONFIRMED);
+        Integer deliveredOrders = Math.toIntExact(orderService.count(deliveredWrapper));
 
         //已完成
-        map.put("status", Orders.COMPLETED);
-        Integer completedOrders = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> completedWrapper = new LambdaQueryWrapper<>();
+        completedWrapper.ge(Orders::getOrderTime, todayBegin).eq(Orders::getStatus, Orders.COMPLETED);
+        Integer completedOrders = Math.toIntExact(orderService.count(completedWrapper));
 
         //已取消
-        map.put("status", Orders.CANCELLED);
-        Integer cancelledOrders = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> cancelledWrapper = new LambdaQueryWrapper<>();
+        cancelledWrapper.ge(Orders::getOrderTime, todayBegin).eq(Orders::getStatus, Orders.CANCELLED);
+        Integer cancelledOrders = Math.toIntExact(orderService.count(cancelledWrapper));
 
         //全部订单
-        map.put("status", null);
-        Integer allOrders = orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> allWrapper = new LambdaQueryWrapper<>();
+        allWrapper.ge(Orders::getOrderTime, todayBegin);
+        Integer allOrders = Math.toIntExact(orderService.count(allWrapper));
 
         return OrderOverViewVO.builder()
                 .waitingOrders(waitingOrders)
@@ -123,12 +132,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
      * @return
      */
     public DishOverViewVO getDishOverView() {
-        Map map = new HashMap();
-        map.put("status", StatusConstant.ENABLE);
-        Integer sold = dishMapper.countByMap(map);
+        LambdaQueryWrapper<Dish> enabledWrapper = new LambdaQueryWrapper<>();
+        enabledWrapper.eq(Dish::getStatus, StatusConstant.ENABLE);
+        Integer sold = Math.toIntExact(dishService.count(enabledWrapper));
 
-        map.put("status", StatusConstant.DISABLE);
-        Integer discontinued = dishMapper.countByMap(map);
+        LambdaQueryWrapper<Dish> disabledWrapper = new LambdaQueryWrapper<>();
+        disabledWrapper.eq(Dish::getStatus, StatusConstant.DISABLE);
+        Integer discontinued = Math.toIntExact(dishService.count(disabledWrapper));
 
         return DishOverViewVO.builder()
                 .sold(sold)
@@ -142,12 +152,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
      * @return
      */
     public SetmealOverViewVO getSetmealOverView() {
-        Map map = new HashMap();
-        map.put("status", StatusConstant.ENABLE);
-        Integer sold = setmealMapper.countByMap(map);
+        LambdaQueryWrapper<Setmeal> enabledWrapper = new LambdaQueryWrapper<>();
+        enabledWrapper.eq(Setmeal::getStatus, StatusConstant.ENABLE);
+        Integer sold = Math.toIntExact(setmealService.count(enabledWrapper));
 
-        map.put("status", StatusConstant.DISABLE);
-        Integer discontinued = setmealMapper.countByMap(map);
+        LambdaQueryWrapper<Setmeal> disabledWrapper = new LambdaQueryWrapper<>();
+        disabledWrapper.eq(Setmeal::getStatus, StatusConstant.DISABLE);
+        Integer discontinued = Math.toIntExact(setmealService.count(disabledWrapper));
 
         return SetmealOverViewVO.builder()
                 .sold(sold)

@@ -80,7 +80,7 @@ public class SetMealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         BeanUtils.copyProperties(setmealDTO, setmeal);
         updateById(setmeal);
         Long id = setmeal.getId();
-        setMealDishMapper.deleteBySetmealId(id);
+        setMealDishService.remove(new LambdaQueryWrapper<SetmealDish>().eq(SetmealDish::getSetmealId, id));
         List<SetmealDish> setmealDishes = setmealDTO.getSetmealDishes();
         setmealDishes.forEach(setmealDish -> {
             setmealDish.setSetmealId(id);

@@ -11,7 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface OrderMapper extends BaseMapper<Orders> {
@@ -30,10 +29,6 @@ public interface OrderMapper extends BaseMapper<Orders> {
 
     @Select("select * from orders where status = #{status} and order_time < #{orderTime}")
     List<Orders> getByStatusAndOrderTime(Integer status, LocalDateTime orderTime);
-
-    Double sumByMap(Map<String, Object> map);
-
-    Integer countByMap(Map<String, Object> map);
 
     List<GoodsSalesDTO> getTop10(LocalDateTime begin, LocalDateTime end);
 }

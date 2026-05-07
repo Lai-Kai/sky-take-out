@@ -52,7 +52,7 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
                 shoppingCart.setAmount(dish.getPrice());
             }else{
                 Long setmealId = dto.getSetmealId();
-                Setmeal setmeal = setmealMapper.getById(setmealId);
+                Setmeal setmeal = setmealService.getById(setmealId);
                 shoppingCart.setName(setmeal.getName());
                 shoppingCart.setImage(setmeal.getImage());
                 shoppingCart.setAmount(setmeal.getPrice());

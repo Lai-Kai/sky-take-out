@@ -1,14 +1,16 @@
 package com.sky.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sky.dto.GoodsSalesDTO;
 import com.sky.entity.Orders;
+import com.sky.entity.User;
 import com.sky.mapper.OrderMapper;
-import com.sky.mapper.UserMapper;
+import com.sky.service.OrderService;
 import com.sky.service.ReportService;
+import com.sky.service.UserService;
 import com.sky.service.WorkspaceService;
 import com.sky.vo.*;
 import org.apache.commons.lang.StringUtils;
-import org.apache.poi.util.StringUtil;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -23,19 +25,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class ReportServiceImpl implements ReportService {
 
     @Autowired
-    private OrderMapper orderMapper;
+    private OrderService orderService;
 
     @Autowired
-    private UserMapper userMapper;
+    private com.sky.mapper.OrderMapper orderMapper;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -54,12 +57,9 @@ public class ReportServiceImpl implements ReportService {
             LocalDateTime beginTime = date.atStartOfDay();
             LocalDateTime endTime = date.plusDays(1).atStartOfDay();
 
-            Map<String, Object> map = new HashMap<>();
-            map.put("begin", beginTime);
-            map.put("end", endTime);
-            map.put("status", Orders.COMPLETED);
-
-            Double turnover = orderMapper.sumByMap(map);
+            LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+            wrapper.ge(Orders::getOrderTime, beginTime).lt(Orders::getOrderTime, endTime).eq(Orders::getStatus, Orders.COMPLETED);
+            Double turnover = orderService.list(wrapper).stream().mapToDouble(Orders::getAmount).sum();
             turnoverList.add(turnover == null ? 0.0 : turnover);
         }
 
@@ -85,12 +85,16 @@ public class ReportServiceImpl implements ReportService {
             LocalDateTime beginTime = date.atStartOfDay();
             LocalDateTime endTime = date.plusDays(1).atStartOfDay().minusNanos(1);
 
-            Map map = new HashMap();
-            map.put("end", endTime);
-            Integer totalUserCount = userMapper.countByMap(map);
+            // Total users up to endTime
+            LambdaQueryWrapper<User> totalWrapper = new LambdaQueryWrapper<>();
+            totalWrapper.le(User::getCreateTime, endTime);
+            Integer totalUserCount = Math.toIntExact(userService.count(totalWrapper));
             totalUserList.add(totalUserCount);
-            map.put("begin", beginTime);
-            Integer newUserCount = userMapper.countByMap(map);
+
+            // New users in this day
+            LambdaQueryWrapper<User> newWrapper = new LambdaQueryWrapper<>();
+            newWrapper.ge(User::getCreateTime, beginTime).le(User::getCreateTime, endTime);
+            Integer newUserCount = Math.toIntExact(userService.count(newWrapper));
             newUserList.add(newUserCount);
         }
         return UserReportVO.builder()
@@ -193,11 +197,12 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private Integer getOrderCount(LocalDateTime beginTime, LocalDateTime endTime, Integer status) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("begin", beginTime);
-        map.put("end", endTime);
-        map.put("status", status);
-        return orderMapper.countByMap(map);
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(Orders::getOrderTime, beginTime).lt(Orders::getOrderTime, endTime);
+        if (status != null) {
+            wrapper.eq(Orders::getStatus, status);
+        }
+        return Math.toIntExact(orderService.count(wrapper));
     }
 
 }
