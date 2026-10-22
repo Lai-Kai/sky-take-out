@@ -1,3 +1,8 @@
+spring:
+  config:
+    # Optional local credentials; use QINIU_ACCESS_KEY/QINIU_SECRET_KEY elsewhere.
+    import: optional:classpath:application-local.yml
+
 sky:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -11,6 +16,12 @@ sky:
     port: 6379
     password: 123456
     database: 0
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
 
 
   alioss:
@@ -21,8 +32,8 @@ sky:
 
   qiniu:
 
-    access-key: lFUnPYNmg2_-5NCUu3r2qORqrZHNa6Wr8t0cuSB3
-    secret-key: 999XOFU2i8QTTBgDtlDlRSJ2rkkaEbkBw7v_jn_D
+    access-key: ${QINIU_ACCESS_KEY:}
+    secret-key: ${QINIU_SECRET_KEY:}
     bucket-name: klare-sky-take-out
     host-name: http://tbmqus6cu.hd-bkt.clouddn.com
     # public | private-signed

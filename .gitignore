@@ -4,3 +4,6 @@
 *.class
 *Test.java
 **/test/
+
+# Local credentials
+/sky-server/src/main/resources/application-local.yml
